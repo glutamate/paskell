@@ -30,9 +30,10 @@ evalE (EApp efun eargs) = do
    vfun vargs
 evalE (ELam ps body) = do
    return $ VLam $ \vargs -> do
-            allExts <- mapM (uncurry matchPV) $ zip ps vargs
-            
-            return $ VInt 4
+              allExts <- mapM (uncurry matchPV) $ zip ps vargs
+              withExtensions (concat allExts) $ evalEs body        
+evalE (ETy t e) = evalE e
+
 evalEs :: [E] -> EvalM V
 evalEs [] = fail "empty function body"
 evalEs [e] = evalE e

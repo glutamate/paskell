@@ -6,7 +6,6 @@ import Paskell.Expr
 import Control.Monad
 import Data.IORef
 
-
 instance Functor EvalM where
    fmap f (EvalM sm) = EvalM $ \evs -> do 
          res1 <- sm evs
@@ -30,7 +29,6 @@ instance MonadPlus EvalM where
                r@(Right _) -> return r
                Left _ -> (unEvalM m2) es
                             
-
 liftio mio = EvalM $ \evs-> do
        x <- mio 
        return $ Right (x,evs)
@@ -42,18 +40,25 @@ put :: EvalS -> EvalM ()
 put evs = EvalM $ \_ -> return $ Right ((), evs)
 
 
+envToRefs :: [(String, V)] -> EvalM [(String, IORef V)] 
+envToRefs exts = forM exts $ \(nm,v) -> do 
+         ref <- liftio (newIORef v )
+         return (nm,ref)
+
 extendValues :: [(String, V)] -> EvalM ()
 extendValues exts = do 
    ES vals tys <- get
-   extRefs <- forM exts $ \(nm,v) -> do 
-         ref <- liftio (newIORef v )
-         return (nm,ref)
+   extRefs <- envToRefs exts
    put $ ES (extRefs++vals) tys
 
 withExtensions :: [(String, V)] -> EvalM a -> EvalM a
-withExtensions exts = undefined
-
---failEv s = 
+withExtensions exts ma = do
+   ES vals tys <- get
+   extRefs <- envToRefs exts
+   put $ ES (extRefs++vals) tys
+   x <- ma
+   put $ ES (vals) tys
+   return x
 
 readRef ref = liftio $ readIORef ref
 writeRef ref v = liftio $ writeIORef ref v
