@@ -42,8 +42,14 @@ Build-type:          Simple
 -- Constraint on the version of Cabal needed to build this package.
 Cabal-version:       >=1.2
 
+Executable pask   
+--   Hs-source-dirs:   prog
+   Main-Is:          Paskell/Pask.hs
+   ghc-options:      -O2 
+   Build-depends:    base
 
-Library
+
+--Library
   -- Modules exported by the library.
   -- Exposed-modules:     
   

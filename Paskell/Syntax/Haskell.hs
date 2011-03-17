@@ -1,4 +1,4 @@
-{-# LANGUAGE Rank2Types, ScopedTypeVariables, FlexibleInstances #-}
+{-# LANGUAGE Rank2Types, ScopedTypeVariables, FlexibleInstances, OverloadedStrings #-}
 module Paskell.Syntax.Haskell where
 
 import Paskell.Expr
@@ -6,14 +6,36 @@ import Paskell.EvalM
 import Control.Monad
 import Data.Maybe
 import System.IO.Unsafe
+import Data.String
+
+instance IsString E where
+   fromString s = EVar s
+
+instance IsString Pat where
+   fromString s = PVar s
+
 
 e1 $> eargs = EApp e1 eargs
 
+infixl 0 =:
+
+class HasAssign a where
+   (=:) :: Pat -> E -> a
+
+instance HasAssign D where
+   p =: e = DLet p e
+
+instance HasAssign E where
+   p =: e = EAssign p e
+
 tint = TCon "Int"
 treal = TCon "Real"
+tstring = TCon "String"
+tunit = TCon "Unit"
 a = TVar "a"
 b = TVar "b"
 c = TVar "c"
+vunit = pack ()
 
 infixr 3 ~>
 
@@ -26,6 +48,14 @@ instance Num E where
    abs e = EVar "abs" $> [e]
    signum e = EVar "signum" $> [e]
    fromInteger n = ECon (VInt $ fromInteger n)
+
+instance Num Pat where
+   e1 + e2 = error "Pattern nummeric instance"
+   e1 - e2 = error "Pattern nummeric instance"
+   e1 * e2 = error "Pattern nummeric instance"
+   abs e = error "Pattern nummeric instance"
+   signum e = error "Pattern nummeric instance"
+   fromInteger n = PLit (VInt $ fromInteger n)
 
 
 class Reify a where
@@ -49,6 +79,20 @@ instance Reify Int where
     reify (VInt x) = Just x
     reify v = Nothing
     pack = VInt
+    packType _ = tint
+
+instance Reify () where 
+    reify (VCons "unit" []) = Just ()
+    reify v = Nothing
+    pack () = VCons "unit" []
+    packType _ =  TCon "unit"
+
+newtype String_ = String_ { unString :: [Char] }
+
+instance Reify String_ where 
+    reify (VString s) = Just $ String_ s
+    reify v = Nothing
+    pack (String_ s) = VString s
     packType _ = tint
 
 instance Reify Bool where 

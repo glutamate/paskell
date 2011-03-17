@@ -6,7 +6,7 @@ module Paskell.Expr where
 import Data.Generics
 import Data.List
 import Control.Monad
-import Control.Monad.State.Strict
+--import Control.Monad.State.Strict
 import Data.IORef
 
 data EvalS = ES {

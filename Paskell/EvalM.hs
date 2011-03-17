@@ -19,6 +19,7 @@ instance Monad EvalM where
          res1 <- sm evs
          case res1 of
            Right (res, newevs) -> unEvalM (k res) newevs
+           Left s -> return $ Left s
    fail s = EvalM $ \_ -> return $ Left s
 
 instance MonadPlus EvalM where
@@ -28,6 +29,13 @@ instance MonadPlus EvalM where
              case res of 
                r@(Right _) -> return r
                Left _ -> (unEvalM m2) es
+
+withoutState :: (IO (Either String a)) -> EvalM a
+withoutState mex = do
+       ex <- liftio mex
+       case ex of
+          Left s -> fail s
+          Right x -> return x
                             
 liftio mio = EvalM $ \evs-> do
        x <- mio 

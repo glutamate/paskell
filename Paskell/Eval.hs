@@ -6,6 +6,7 @@ import Paskell.Expr
 import Paskell.EvalM
 import Control.Monad
 
+
 evalD :: D -> EvalM ()
 evalD (DLet p e) = do
    v <- evalE e
@@ -33,11 +34,23 @@ evalE (ELam ps body) = do
               allExts <- mapM (uncurry matchPV) $ zip ps vargs
               withExtensions (concat allExts) $ evalEs body        
 evalE (ETy t e) = evalE e
+evalE (ECase ex pats) = do
+  v <- evalE ex
+  evalCase v pats
+
+evalCase :: V -> [(Pat, E)] -> EvalM V
+evalCase v [] = fail $ "evalCase: non-exhaustive case; no match for: "++show v      
+evalCase v ((pat,e):rest) =     
+    (do exts <- matchPV pat v 
+        withExtensions exts $ evalE e
+    ) `mplus` evalCase v rest 
+
+
 
 evalEs :: [E] -> EvalM V
 evalEs [] = fail "empty function body"
 evalEs [e] = evalE e
 evalEs (e:es) = evalE e >> evalEs es
 
-matchPV :: Pat -> V -> EvalM [(String,V)]
+matchPV :: MonadPlus m => Pat -> V -> m [(String,V)]
 matchPV (PVar nm) v = return [(nm,v)]
