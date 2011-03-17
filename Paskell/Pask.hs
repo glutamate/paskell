@@ -23,24 +23,25 @@ evalModule args ds = do
     ES vls _ <- get
     onHeadM [ mainRef | ("main", mainRef) <- vls] $ \mainRef -> do
            VLam vlam <- readRef mainRef
-           _ <- vlam $ map VString args
+           _ <- liftio $ vlam $ map VString args
            return ()
     return ()
 
 for :: D
 for = "for" =: ELam ["counter", "f"] [ECase "counter" 
                                          [(0, ECon (pack ())),
-                                          (1, "f" $> []
+                                          (1, "f" $> [])]
                                      ]
 
 
 helloWorld :: [D]
 helloWorld = 
   [ "x" =: 5,
-    "main" =: (ELam [] $ ["print" $> [ECon (VString "Hello World")],
+    "main" =: (ELam ["s"] $ ["print" $> [ECon (VString "Hello World")],
                           "y" =: 11,
                           "y" =: 1+"y",
-                          "print" $> ["showInt" $> ["y"]] ])
+                          "print" $> ["showInt" $> ["y"]],
+                          "print" $> ["s"] ])
   ]
 
 main = do

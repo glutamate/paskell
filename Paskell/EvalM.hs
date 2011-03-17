@@ -30,7 +30,7 @@ instance MonadPlus EvalM where
                r@(Right _) -> return r
                Left _ -> (unEvalM m2) es
 
-withoutState :: (IO (Either String a)) -> EvalM a
+withoutState :: FailIO a -> EvalM a
 withoutState mex = do
        ex <- liftio mex
        case ex of
@@ -48,21 +48,21 @@ put :: EvalS -> EvalM ()
 put evs = EvalM $ \_ -> return $ Right ((), evs)
 
 
-envToRefs :: [(String, V)] -> EvalM [(String, IORef V)] 
+envToRefs :: [(String, V)] -> IO [(String, IORef V)] 
 envToRefs exts = forM exts $ \(nm,v) -> do 
-         ref <- liftio (newIORef v )
+         ref <- (newIORef v )
          return (nm,ref)
 
 extendValues :: [(String, V)] -> EvalM ()
 extendValues exts = do 
    ES vals tys <- get
-   extRefs <- envToRefs exts
+   extRefs <- liftio $ envToRefs exts
    put $ ES (extRefs++vals) tys
 
 withExtensions :: [(String, V)] -> EvalM a -> EvalM a
 withExtensions exts ma = do
    ES vals tys <- get
-   extRefs <- envToRefs exts
+   extRefs <- liftio $  envToRefs exts
    put $ ES (extRefs++vals) tys
    x <- ma
    put $ ES (vals) tys

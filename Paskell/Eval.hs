@@ -5,7 +5,7 @@ module Paskell.Eval where
 import Paskell.Expr
 import Paskell.EvalM
 import Control.Monad
-
+import Data.Maybe
 
 evalD :: D -> EvalM ()
 evalD (DLet p e) = do
@@ -28,13 +28,22 @@ evalE (EAssign p e) = do
 evalE (EApp efun eargs) = do
    VLam vfun <- evalE efun
    vargs <- mapM evalE eargs
-   vfun vargs
+   withoutState $ vfun vargs
 evalE (ELam ps body) = do
+   ES vals ds <- get
    return $ VLam $ \vargs -> do
-              allExts <- mapM (uncurry matchPV) $ zip ps vargs
-              withExtensions (concat allExts) $ evalEs body        
+              allExts <- envToRefs $ concat 
+                         $ catMaybes 
+                         $ map (uncurry matchPV) 
+                         $ zip ps vargs 
+
+--              withExtensions (concat allExts)
+              res <- (unEvalM (evalEs body)) $ ES (allExts++vals) ds
+              case res of 
+                Left s -> fail s
+                Right (v,es) -> return $ Right v
 evalE (ETy t e) = evalE e
-evalE (ECase ex pats) = do
+evalE (ECase ex pats) = do 
   v <- evalE ex
   evalCase v pats
 

@@ -16,6 +16,8 @@ data EvalS = ES {
 
 newtype EvalM a = EvalM { unEvalM :: EvalS -> IO (Either String (a, EvalS)) }
 
+type FailIO a = IO (Either String a)
+
 data D = DLet Pat E
        | DMkType String [String] [(String, [T])]
        | DDecTy [String] T
@@ -25,7 +27,7 @@ data D = DLet Pat E
 data V = VReal Double
        | VInt Int
 --       | VSeed Seed
-       | VLam ([V]->EvalM V)
+       | VLam ([V]->FailIO V)
        | VString String
        | VCons String [V]
        | VRec [(String,V)]
@@ -58,11 +60,11 @@ data Pat = PLit V
          | PWithRec
            deriving (Show, Eq, Read)
 
-instance Show ([V]->EvalM V) where
+instance Show ([V]->FailIO V) where
    show f = "<function>"
 
-instance Read ([V]->EvalM V) where
+instance Read ([V]->FailIO V) where
    readsPrec _ s = error $ "read: <function>" ++s
 
-instance Eq ([V]->EvalM V) where
+instance Eq ([V]->FailIO V) where
    f == g = error "eq: <function>"
