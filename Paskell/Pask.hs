@@ -7,15 +7,18 @@ import Paskell.EvalM
 import Paskell.Syntax.Haskell
 import System.Environment
 import Paskell.BuiltIns
+import Control.Monad.State.Lazy
+import Control.Monad.Error
+
 
 runModule :: [D] -> IO EvalS
 runModule ds = do
    let initS = ES [] []
    args <- getArgs
-   res <- unEvalM (evalModule args (bifDs++ds)) initS 
+   res <- runErrorT $ execStateT (evalModule args (bifDs++ds)) initS 
    case res of
       Left s -> fail s
-      Right (_, eS) -> return eS
+      Right eS -> return eS
 
 evalModule :: [String] -> [D] -> EvalM ()
 evalModule args ds = do
@@ -23,28 +26,51 @@ evalModule args ds = do
     ES vls _ <- get
     onHeadM [ mainRef | ("main", mainRef) <- vls] $ \mainRef -> do
            VLam vlam <- readRef mainRef
-           _ <- liftio $ vlam $ map VString args
+           _ <- lift $ vlam $ map VString args
            return ()
     return ()
 
-for :: D
-for = "for" =: ELam ["counter", "f"] [ECase "counter" 
-                                         [(0, ECon (pack ())),
-                                          (1, "f" $> [])]
+unite = ECon (pack ())
+
+estr = ECon . VString
+
+forDecl :: D
+forDecl = "for" =: ELam "counter f" [ECase "counter" 
+                                         [(0, [unite] ),
+                                          (1, ["f" $> ["counter"]]),
+                                          ("n", ["f" $> ["counter"], 
+                                                 "for" $> [("counter"-1), "f"]])]
                                      ]
+
+myProcD :: D
+myProcD = "myProc" =: ELam "t" ["print" $> [estr "hello from myproc"],
+                                "print" $> ["showInt" $> ["t"]]]
 
 
 helloWorld :: [D]
 helloWorld = 
   [ "x" =: 5,
-    "main" =: (ELam ["s"] $ ["print" $> [ECon (VString "Hello World")],
-                          "y" =: 11,
+    forDecl,
+    myProcD,
+    "main" =: (ELam "s" $ ["print" $> [estr "Hello World"],
+                          "y" =: 9,
                           "y" =: 1+"y",
-                          "print" $> ["showInt" $> ["y"]],
-                          "print" $> ["s"] ])
+                          "z" =: 1,
+                          "myProc" $> [5],
+                          "print" $> ["showInt" $> ["z"]],
+                          "print" $> ["s"],
+                          "for"   $> [10, ELam "i" [
+                                 "z" =: "z"+"i",
+                                 "print" $> [estr "inside for!"]
+                              ]],
+                          "print" $> ["showInt" $> ["z"]],
+                          "print" $> [estr "goodbye!"]
+               ])
+
   ]
 
 main = do
+     mapM_ print helloWorld
      runModule helloWorld
 --     mapM_ print helloWorld
      return ()

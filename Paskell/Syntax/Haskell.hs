@@ -6,6 +6,9 @@ import Paskell.EvalM
 import Control.Monad
 import Data.Maybe
 import System.IO.Unsafe
+import Control.Monad.Error
+import Control.Monad.Trans
+
 import Data.String
 
 instance IsString E where
@@ -13,6 +16,9 @@ instance IsString E where
 
 instance IsString Pat where
    fromString s = PVar s
+
+instance IsString [Pat] where
+   fromString = map fromString . words 
 
 
 e1 $> eargs = EApp e1 eargs
@@ -85,7 +91,7 @@ instance Reify () where
     reify (VCons "unit" []) = Just ()
     reify v = Nothing
     pack () = VCons "unit" []
-    packType _ =  TCon "unit"
+    packType _ =  TCon "Unit"
 
 newtype String_ = String_ { unString :: [Char] }
 
@@ -107,17 +113,18 @@ instance (Reify a, Reify b) => Reify (a-> IO b) where
     reify (VLam f) 
           = Just $ 
              \hsArgs-> do
-                res <- f $ [pack hsArgs]
+                res <- runErrorT $ f $ [pack hsArgs]
+                
                 case res of
                      Left s -> error $ "error in reify function: "++s
-                     Right v -> return $ fromJust $ reify v
+                     Right v -> return $ fromJust $ reify v 
     reify _ = Nothing
     pack f = VLam $
               \[v]-> case reify v of 
                     Nothing -> fail $ "pack function: fail for argument" 
                                       ++ show v++" for function of type "++show (packType f)
-                    Just x ->  do v<- f x
-                                  return $ Right$ pack v
+                    Just x ->  do v<- liftIO $ f x
+                                  return $ pack v
     packType f = typeFIO f 
 
 typeFIO :: forall a b. (Reify a, Reify b) => (a-> IO b) -> T
@@ -140,11 +147,11 @@ packF1 :: (Reify a, Reify b) => (a->b) -> (T,V)
 packF1 f = (typeF f, VLam $ \[v] -> case reify v of 
                     Nothing -> error $ "pack function: fail for argument" 
                                       ++ show v++" for function of type "++show (typeF f)
-                    Just x ->  return $ Right $ pack $ (f x ))
+                    Just x ->  return $ pack $ (f x ))
 
 packF2 :: (Reify a, Reify b, Reify c) => (a->b->c) -> (T,V)
 packF2 f = (typeF2 f, VLam $ \[vx,vy] -> case liftM2 (,) (reify vx) (reify vy) of 
                     Nothing -> error $ "pack function: fail for argument" 
                                       ++ show vx++" for function of type "++show (typeF2 f)
-                    Just (x,y) ->  return $ Right $pack $ (f x y))
+                    Just (x,y) ->  return $ pack $ (f x y))
 

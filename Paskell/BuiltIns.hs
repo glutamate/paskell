@@ -13,6 +13,8 @@ type BiF = (String, (T, V))
 bifs :: [BiF]
 bifs = 
   [ ("+", packF2 $ ((+)::Int->Int->Int)),
+    ("-", packF2 $ ((-)::Int->Int->Int)),
+    ("*", packF2 $ ((*)::Int->Int->Int)),
     ("print", ([tstring] ~> tunit, pack $ putStrLn . unString)),
     ("showInt", packF1 $ ((String_ . show)::Int->String_)) ]
 
