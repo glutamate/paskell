@@ -31,42 +31,62 @@ evalModule args ds = do
     return ()
 
 unite = ECon (pack ())
-
+  
 estr = ECon . VString
 
-forDecl :: D
-forDecl = "for" =: ELam "counter f" [ECase "counter" 
-                                         [(0, [unite] ),
-                                          (1, ["f" $> ["counter"]]),
-                                          ("n", ["f" $> ["counter"], 
-                                                 "for" $> [("counter"-1), "f"]])]
-                                     ]
+--forDecl :: D
+forDecl = "for" =: lam "counter f" $- do 
+                        caseOf "counter" $- do
+                           0  ->> e ()
+                           1   ->> "f" $>> ["counter"]
+                           "n" ->> do  "f" $>> ["counter"]
+                                       "for" $>> ["counter"-1, "f"]
+            
+{-forDecl = "for" =: lam "lo hi f" $- do 
+                         if_ ("lo" .>. "hi") Then 
+                              (return ())
+                           Else (do 
+                              "f" $>>["lo"]
+                              "for" $>> ["lo"+1, "hi", "f"]) -}
+                                
 
+                           
 myProcD :: D
-myProcD = "myProc" =: ELam "t" ["print" $> [estr "hello from myproc"],
-                                "print" $> ["showInt" $> ["t"]]]
+myProcD = "myProc" =: lam "t" $- do 
+             "print" $>> [estr "hello from myproc"]
+             "print" $>> ["showInt" $> ["t"]] 
 
+
+prints s = "print" $>> [estr s]
+
+e1 .>. e2 = ">" $> [e1,e2]
+e1 .<. e2 = "<" $> [e1,e2]
 
 helloWorld :: [D]
 helloWorld = module_ $ do
-    "x" =: 5 
-    d forDecl
+    "x" =: 5  
+    forDecl
     d myProcD
-    "main" =: (lam "s" $ do 
-                  "print" $>> [estr "Hello World"]
+    "main" =: lam "s" $- do 
+                  prints "Hello World"
                   "y" =: 9
                   "y" =: 1+"y"
                   "z" =: 1
                   "myProc" $>> [5]
                   "print" $>> ["showInt" $> ["z"]]
                   "print" $>> ["s"] 
-                  for 10 $ lam "i" $ do
+                  for 10 $ lam "i" $- do
                                  "z" =: "z"+"i"
+                                 if_ ("z" .>. 3) Then (do 
+                                       prints "baz!")
+                                   Else ( do 
+                                       prints "boos" )
+                               
                                  "print" $>> [estr "inside for!"]
                               
                   "print" $>> ["showInt" $> ["z"]]
-                  "print" $>> [estr "goodbye!"]
-               )
+                  "print" $>> [estr "goodbye!"] 
+                
 
   
 

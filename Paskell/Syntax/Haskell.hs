@@ -1,4 +1,4 @@
-{-# LANGUAGE Rank2Types, ScopedTypeVariables, FlexibleInstances, OverloadedStrings, TypeSynonymInstances #-}
+{-# LANGUAGE Rank2Types, ScopedTypeVariables, FlexibleInstances, OverloadedStrings, TypeSynonymInstances, TypeOperators, GADTs #-}
 module Paskell.Syntax.Haskell where
 
 import Paskell.Expr
@@ -22,9 +22,13 @@ instance IsString [Pat] where
    fromString = map fromString . words 
 
 
-e1 $> eargs = EApp e1 eargs
-
 infixl 0 =:
+infixl 1 $-
+
+($>) :: E -> [E] -> E
+f $> es = EApp f es
+
+f $- x = f x 
 
 class HasAssign a where
    (=:) :: Pat -> E -> a
@@ -159,7 +163,12 @@ packF2 f = (typeF2 f, VLam $ \[vx,vy] -> case liftM2 (,) (reify vx) (reify vy) o
 
 
 type TopLevel a = Writer [D] a
+type CasePates = Writer [Pat :-> Function ()] ()
 type Function a = Writer [E] a
+
+infixl 1 ->>
+
+p ->> es = tell [p :-> es]
 
 instance HasAssign (TopLevel a) where
    p =: e = tell [DLet p e] >> return undefined
@@ -176,6 +185,58 @@ module_ = execWriter
 d :: D -> TopLevel ()
 d = tell . (:[])
 
+e :: ToExprs a => a -> Function ()
+e = tell . toExprs
+
 e $>> es = tell [e $> es]
 
 for n lam = "for" $>> [n,lam]
+
+infixl 5 :-> 
+infixl 6 $>> 
+
+
+data a :-> b = a :-> b
+
+data Then = Then
+data Else = Else
+
+if_ :: E -> Then ->Function () -> Else -> Function () -> Function ()
+if_ p _ c _ a = tell [EIf p (execWriter c) (execWriter a)]
+
+caseOf :: E -> CasePates -> Function ()
+caseOf e pates = tell [ECase e $ map f $ execWriter pates]  where
+   f (p:->es) = (p,execWriter es)
+
+class ToExprs a where
+   toExprs :: a -> [E]
+
+instance ToExprs E where
+   toExprs = (:[])
+
+instance ToExprs [Char] where
+   toExprs = (:[]) . EVar
+
+instance ToExprs [E] where
+   toExprs = id
+
+instance ToExprs V where
+   toExprs = (:[]) . ECon
+
+instance ToExprs () where
+   toExprs _ = [ECon (pack ())]
+
+instance ToExprs (Function ()) where
+   toExprs w = execWriter w
+
+
+class CallResult a where
+   call :: ToExprs b => E -> b -> a
+
+instance CallResult (Function ()) where
+   f `call` args = tell [EApp f (toExprs args)]
+
+instance CallResult (E) where
+   f `call` args = EApp f (toExprs args)
+
+--($>) = call

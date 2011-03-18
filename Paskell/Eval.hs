@@ -53,6 +53,11 @@ evalE (ETy t e) = evalE e
 evalE (ECase ex pats) = do 
   v <- evalE ex
   evalCase v pats
+evalE (EIf p c a) = do
+  b <- evalE p
+  case b of
+       VCons "True" _ -> evalEs c
+       VCons "False" _ -> evalEs a
 
 evalCase :: V -> [(Pat, [E])] -> EvalM V
 evalCase v [] = failEvM $ "evalCase: non-exhaustive case; no match for: "++show v      

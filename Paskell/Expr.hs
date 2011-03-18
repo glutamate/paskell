@@ -51,6 +51,7 @@ data E = ECon V
        | EVar String
        | ECase E [(Pat, [E])]
        | ETy T E
+       | EIf E [E] [E]
          deriving (Show, Eq, Read)
        
 data Pat = PLit V
