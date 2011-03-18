@@ -46,7 +46,7 @@ Executable pask
 --   Hs-source-dirs:   prog
    Main-Is:          Paskell/Pask.hs
    ghc-options:      -O2 
-   Build-depends:    base, mtl<2
+   Build-depends:    base, mtl
 
 
 --Library

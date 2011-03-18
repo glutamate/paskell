@@ -1,4 +1,4 @@
-{-# LANGUAGE Rank2Types, ScopedTypeVariables, FlexibleInstances, OverloadedStrings #-}
+{-# LANGUAGE Rank2Types, ScopedTypeVariables, FlexibleInstances, OverloadedStrings, TypeSynonymInstances #-}
 module Paskell.Syntax.Haskell where
 
 import Paskell.Expr
@@ -7,6 +7,7 @@ import Control.Monad
 import Data.Maybe
 import System.IO.Unsafe
 import Control.Monad.Error
+import Control.Monad.Writer
 import Control.Monad.Trans
 
 import Data.String
@@ -155,3 +156,26 @@ packF2 f = (typeF2 f, VLam $ \[vx,vy] -> case liftM2 (,) (reify vx) (reify vy) o
                                       ++ show vx++" for function of type "++show (typeF2 f)
                     Just (x,y) ->  return $ pack $ (f x y))
 
+
+
+type TopLevel a = Writer [D] a
+type Function a = Writer [E] a
+
+instance HasAssign (TopLevel a) where
+   p =: e = tell [DLet p e] >> return undefined
+
+instance HasAssign (Function a) where
+   p =: e = tell [p =: e] >> return undefined
+
+lam :: [Pat] -> Function () -> E
+lam pats fwriter = ELam pats $ execWriter fwriter
+
+module_ :: TopLevel () -> [D]
+module_ = execWriter
+
+d :: D -> TopLevel ()
+d = tell . (:[])
+
+e $>> es = tell [e $> es]
+
+for n lam = "for" $>> [n,lam]

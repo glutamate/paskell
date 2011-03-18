@@ -48,26 +48,27 @@ myProcD = "myProc" =: ELam "t" ["print" $> [estr "hello from myproc"],
 
 
 helloWorld :: [D]
-helloWorld = 
-  [ "x" =: 5,
-    forDecl,
-    myProcD,
-    "main" =: (ELam "s" $ ["print" $> [estr "Hello World"],
-                          "y" =: 9,
-                          "y" =: 1+"y",
-                          "z" =: 1,
-                          "myProc" $> [5],
-                          "print" $> ["showInt" $> ["z"]],
-                          "print" $> ["s"],
-                          "for"   $> [10, ELam "i" [
-                                 "z" =: "z"+"i",
-                                 "print" $> [estr "inside for!"]
-                              ]],
-                          "print" $> ["showInt" $> ["z"]],
-                          "print" $> [estr "goodbye!"]
-               ])
+helloWorld = module_ $ do
+    "x" =: 5 
+    d forDecl
+    d myProcD
+    "main" =: (lam "s" $ do 
+                  "print" $>> [estr "Hello World"]
+                  "y" =: 9
+                  "y" =: 1+"y"
+                  "z" =: 1
+                  "myProc" $>> [5]
+                  "print" $>> ["showInt" $> ["z"]]
+                  "print" $>> ["s"] 
+                  for 10 $ lam "i" $ do
+                                 "z" =: "z"+"i"
+                                 "print" $>> [estr "inside for!"]
+                              
+                  "print" $>> ["showInt" $> ["z"]]
+                  "print" $>> [estr "goodbye!"]
+               )
 
-  ]
+  
 
 main = do
      mapM_ print helloWorld
