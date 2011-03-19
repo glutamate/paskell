@@ -17,7 +17,9 @@ bifs =
     ("*", packF2 $ ((*)::Int->Int->Int)),
     (">", packF2 $ ((>)::Int->Int->Bool)),
     ("<", packF2 $ ((<)::Int->Int->Bool)),
+    ("showV", packF1 $ ((String_ . show)::V->String_)),
     ("print", ([tstring] ~> tunit, pack $ putStrLn . unString)),
+
     ("showInt", packF1 $ ((String_ . show)::Int->String_)) ]
 
 bifsToDs :: [BiF] -> [D]

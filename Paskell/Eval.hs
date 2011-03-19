@@ -69,7 +69,7 @@ evalCase v ((pat,e):rest) =
 
 
 evalEs :: [E] -> EvalM V
-evalEs [] = failEvM "empty function body"
+evalEs [] = return $ VCons "unit" [] --failEvM "empty function body"
 evalEs [e] = evalE e
 evalEs (e:es) = evalE e >> evalEs es
 

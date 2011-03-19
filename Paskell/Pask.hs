@@ -37,17 +37,18 @@ estr = ECon . VString
 --forDecl :: D
 forDecl = "for" =: lam "counter f" $- do 
                         caseOf "counter" $- do
-                           0  ->> e ()
-                           1   ->> "f" $>> ["counter"]
-                           "n" ->> do  "f" $>> ["counter"]
+                           0  -:> e ()
+                           1   -:> "f" $>> ["counter"]
+                           "n" -:> do  "f" $>> ["counter"]
                                        "for" $>> ["counter"-1, "f"]
-            
-{-forDecl = "for" =: lam "lo hi f" $- do 
+        
+forDecl1, forDecl :: TopLevel ()    
+forDecl1 = "for" =: lam "lo hi f" $- do 
                          if_ ("lo" .>. "hi") Then 
                               (return ())
                            Else (do 
                               "f" $>>["lo"]
-                              "for" $>> ["lo"+1, "hi", "f"]) -}
+                              "for" $>> ["lo"+1, "hi", "f"]) 
                                 
 
                            
@@ -58,6 +59,7 @@ myProcD = "myProc" =: lam "t" $- do
 
 
 prints s = "print" $>> [estr s]
+printV v= "print" $>> ["showV" $> [v]]
 
 e1 .>. e2 = ">" $> [e1,e2]
 e1 .<. e2 = "<" $> [e1,e2]
@@ -65,27 +67,29 @@ e1 .<. e2 = "<" $> [e1,e2]
 helloWorld :: [D]
 helloWorld = module_ $ do
     "x" =: 5  
-    forDecl
+    forDecl1
     d myProcD
     "main" =: lam "s" $- do 
                   prints "Hello World"
-                  "y" =: 9
+                  "y" =: 9  
                   "y" =: 1+"y"
                   "z" =: 1
-                  "myProc" $>> [5]
-                  "print" $>> ["showInt" $> ["z"]]
-                  "print" $>> ["s"] 
-                  for 10 $ lam "i" $- do
+                  "myProc" $> [5]
+                  "print" $> ["showInt" $> ["z"]]
+                  "print" $> ["s"] 
+                  for 1 10 "i" $- do
                                  "z" =: "z"+"i"
-                                 if_ ("z" .>. 3) Then (do 
+                                 printV "i"
+                                 printV "z"
+                                 if_ ("z" .>. 50) Then (do 
                                        prints "baz!")
                                    Else ( do 
                                        prints "boos" )
                                
-                                 "print" $>> [estr "inside for!"]
+                                 "print" $> [estr "inside for!"]
                               
-                  "print" $>> ["showInt" $> ["z"]]
-                  "print" $>> [estr "goodbye!"] 
+                  "print" $> ["showInt" $> ["z"]]
+                  "print" $> [estr "goodbye!"] 
                 
 
   

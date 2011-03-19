@@ -25,9 +25,6 @@ instance IsString [Pat] where
 infixl 0 =:
 infixl 1 $-
 
-($>) :: E -> [E] -> E
-f $> es = EApp f es
-
 f $- x = f x 
 
 class HasAssign a where
@@ -166,9 +163,9 @@ type TopLevel a = Writer [D] a
 type CasePates = Writer [Pat :-> Function ()] ()
 type Function a = Writer [E] a
 
-infixl 1 ->>
+infixl 1 -:>
 
-p ->> es = tell [p :-> es]
+p -:> es = tell [p :-> es]
 
 instance HasAssign (TopLevel a) where
    p =: e = tell [DLet p e] >> return undefined
@@ -190,10 +187,9 @@ e = tell . toExprs
 
 e $>> es = tell [e $> es]
 
-for n lam = "for" $>> [n,lam]
+for n m ix bd = "for" $>> [n, m, ELam ix (execWriter bd)]
 
 infixl 5 :-> 
-infixl 6 $>> 
 
 
 data a :-> b = a :-> b
@@ -231,12 +227,15 @@ instance ToExprs (Function ()) where
 
 
 class CallResult a where
-   call :: ToExprs b => E -> b -> a
+   ($>) :: E -> [E] -> a
 
-instance CallResult (Function ()) where
-   f `call` args = tell [EApp f (toExprs args)]
+instance CallResult (Function a) where
+   f $> args = tell [EApp f args] >> return undefined
 
 instance CallResult (E) where
-   f `call` args = EApp f (toExprs args)
+   f $> args = EApp f args
 
 --($>) = call
+
+--($>) :: E -> [E] -> E
+--f $> es = EApp f es
